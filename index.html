@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Game Recommender — Built From Scratch</title>
+<meta name="description" content="An original from-scratch build of a video-game recommender trained on Amazon review signals: turn millions of noisy reviews into 'if you liked this, play that'." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --accent:#16a34a; --accent-soft:#e7f6ec; --ink:#0e2016; --muted:#476155;
+    --line:#d2ebd9; --bg:#f6fdf8; --card:#ffffff;
+    --serif:'Fraunces',Georgia,serif; --sans:'Inter',system-ui,sans-serif; --mono:'JetBrains Mono',monospace;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.65;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:860px;margin:0 auto;padding:0 28px}
+  a{color:var(--accent);text-decoration:none}
+  a:hover{text-decoration:underline}
+  code{font-family:var(--mono);font-size:.86em;background:var(--accent-soft);padding:.1em .4em;border-radius:4px;color:#15803d}
+  h1,h2,h3{font-family:var(--serif);font-weight:500;line-height:1.15;letter-spacing:-.01em}
+  header.hero{padding:88px 0 56px;border-bottom:1px solid var(--line)}
+  .eyebrow{font-family:var(--mono);font-size:.74rem;letter-spacing:.18em;text-transform:uppercase;color:var(--accent);margin:0 0 22px}
+  h1{font-size:clamp(2.6rem,6vw,4.1rem);margin:0 0 18px}
+  .lede{font-size:1.22rem;color:var(--muted);max-width:62ch;margin:0 0 28px}
+  .meta{display:flex;flex-wrap:wrap;gap:10px;font-size:.82rem}
+  .chip{font-family:var(--mono);font-size:.72rem;letter-spacing:.04em;border:1px solid var(--line);border-radius:999px;padding:5px 12px;color:var(--muted);background:var(--card)}
+  section{padding:54px 0;border-bottom:1px solid var(--line)}
+  .kicker{font-family:var(--mono);font-size:.74rem;letter-spacing:.16em;text-transform:uppercase;color:var(--accent);margin:0 0 14px}
+  h2{font-size:clamp(1.7rem,3.4vw,2.3rem);margin:0 0 20px}
+  h3{font-size:1.2rem;margin:0 0 6px}
+  p{margin:0 0 18px;max-width:68ch}
+  .muted{color:var(--muted)}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-top:8px}
+  .tool{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px}
+  .tool .t{font-family:var(--mono);font-size:.78rem;color:var(--accent);letter-spacing:.04em;margin-bottom:8px}
+  .tool h3{font-size:1.05rem;font-family:var(--sans);font-weight:600;margin-bottom:6px}
+  .tool p{font-size:.92rem;color:var(--muted);margin:0}
+  ol.flow{counter-reset:s;list-style:none;padding:0;margin:24px 0 0}
+  ol.flow li{position:relative;padding:18px 0 18px 56px;border-top:1px solid var(--line)}
+  ol.flow li:before{counter-increment:s;content:counter(s,decimal-leading-zero);position:absolute;left:0;top:18px;font-family:var(--mono);font-size:.8rem;color:var(--accent);border:1px solid var(--line);border-radius:8px;width:38px;height:38px;display:grid;place-items:center;background:var(--card)}
+  ol.flow li h3{font-family:var(--sans);font-size:1.02rem;font-weight:600;margin:0 0 4px}
+  ol.flow li p{margin:0;font-size:.93rem;color:var(--muted)}
+  .callout{background:var(--accent-soft);border:1px solid #b9e2c5;border-radius:14px;padding:24px 26px;margin-top:8px}
+  .callout p:last-child{margin:0}
+  ul.learn{list-style:none;padding:0;margin:8px 0 0}
+  ul.learn li{padding:14px 0 14px 30px;border-top:1px solid var(--line);position:relative;color:var(--muted);max-width:68ch}
+  ul.learn li:before{content:"→";position:absolute;left:0;color:var(--accent);font-family:var(--mono)}
+  ul.learn li b{color:var(--ink);font-weight:600}
+  .price{display:flex;align-items:baseline;gap:14px;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:22px 26px;margin-top:8px}
+  .price .n{font-family:var(--serif);font-size:2.6rem;color:var(--accent);line-height:1}
+  .price .l{color:var(--muted);font-size:.95rem}
+  footer{padding:48px 0 80px}
+  .credit{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:26px}
+  .credit .k{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
+  footer .fine{font-size:.8rem;color:var(--muted);margin-top:22px;text-align:center}
+</style>
+</head>
+<body>
+<header class="hero">
+  <div class="wrap">
+    <p class="eyebrow">From-Scratch Build · Recommendation Systems</p>
+    <h1>Game Recommender</h1>
+    <p class="lede">Millions of Amazon video-game reviews hold a quiet map of what-goes-with-what — if you can read it. This build turns that noisy mountain of ratings into clean "if you liked this, play that" recommendations. I rebuilt it from scratch to learn how a recommender survives contact with real, messy, large-scale data.</p>
+    <div class="meta">
+      <span class="chip">Python</span><span class="chip">Implicit feedback</span><span class="chip">Item-based CF</span>
+      <span class="chip">Sparse matrices</span><span class="chip">Amazon reviews</span><span class="chip">RecSys</span>
+    </div>
+  </div>
+</header>
+
+<section>
+  <div class="wrap">
+    <p class="kicker">What it is</p>
+    <h2>Recommendations from real review data</h2>
+    <p>The dataset is the point. Amazon's video-game reviews are huge, sparse and skewed — a handful of blockbuster titles drown out a long tail of niche games, and most users have reviewed only one or two things. The build learns item-to-item relationships from this: games frequently loved by the same people are linked, so a title you rated highly pulls up its closest companions.</p>
+    <p>Item-based collaborative filtering is the right tool here precisely because it's robust to the mess: relationships between <i>games</i> are far more stable than the fickle, sparse profiles of individual users. It's a lesson in choosing the method that fits the data you actually have.</p>
+    <div class="price">
+      <div class="n">long tail</div>
+      <div class="l">the shape of the data — a few mega-popular games, a vast tail of niche ones — that every design decision has to respect.</div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <p class="kicker">The stack</p>
+    <h2>From raw reviews to "play this next"</h2>
+    <p class="muted">Built to handle scale and sparsity, not a toy dataset.</p>
+    <div class="grid">
+      <div class="tool"><div class="t">data</div><h3>Review corpus</h3><p>Large-scale Amazon game reviews — ratings, users and items at real-world scale.</p></div>
+      <div class="tool"><div class="t">prep</div><h3>Sparse matrix</h3><p>Represent the user–item interactions sparsely so millions of entries fit in memory.</p></div>
+      <div class="tool"><div class="t">core</div><h3>Item similarity</h3><p>Compute which games co-occur in people's libraries — the backbone of item-based CF.</p></div>
+      <div class="tool"><div class="t">signal</div><h3>Implicit feedback</h3><p>Treat a review as a weak signal of interest, weighting confidence rather than trusting stars alone.</p></div>
+      <div class="tool"><div class="t">rank</div><h3>Top-N retrieval</h3><p>For a given game, surface its most-related titles, filtered for popularity bias.</p></div>
+      <div class="tool"><div class="t">evaluate</div><h3>Hit-rate @ K</h3><p>Hold out a user's last game and check whether the recommender would have found it.</p></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <p class="kicker">Architecture</p>
+    <h2>How a recommendation is built</h2>
+    <p>From raw reviews to a related-games list, the pipeline is steady:</p>
+    <ol class="flow">
+      <li><h3>Ingest</h3><p>Load and clean the review data into users, items and ratings.</p></li>
+      <li><h3>Sparsify</h3><p>Build the sparse interaction matrix the algorithm operates on.</p></li>
+      <li><h3>Relate</h3><p>Compute item–item similarities across the whole catalogue.</p></li>
+      <li><h3>Recommend</h3><p>For a seed game, retrieve and rank its nearest companions.</p></li>
+      <li><h3>Validate</h3><p>Measure hit-rate on held-out interactions and correct for popularity bias.</p></li>
+    </ol>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <p class="kicker">Reflection</p>
+    <h2>What rebuilding it taught me</h2>
+    <ul class="learn">
+      <li><b>The data picks the method.</b> Sparse, skewed reviews make item-based CF the natural fit — stable item relationships beat fragile user profiles.</li>
+      <li><b>Implicit signals need confidence.</b> A review isn't a clean rating; weighting how much to trust each interaction matters more than the star value.</li>
+      <li><b>Popularity bias is sneaky.</b> Without correction, the recommender just keeps suggesting the blockbusters everyone already knows.</li>
+      <li><b>Sparsity is an engineering problem.</b> Half the work is representing millions of interactions so the maths even runs.</li>
+      <li><b>Offline metrics are a proxy.</b> Hit-rate is useful, but it only hints at whether a human would actually click play.</li>
+    </ul>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="credit">
+      <div class="k">About this build</div>
+      <p style="margin:0">An original, from-scratch build by <b>Andrea</b> — written to learn recommendation on real, large-scale data: implicit feedback, item-based collaborative filtering, sparse matrices and popularity-aware evaluation. Plain HTML/CSS, deployed on GitHub Pages.</p>
+    </div>
+    <p class="fine">Built from scratch by Andrea · one of an ongoing series of learning builds.</p>
+  </div>
+</footer>
+</body>
+</html>
