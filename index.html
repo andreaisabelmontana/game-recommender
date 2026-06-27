@@ -64,10 +64,10 @@
   <div class="wrap">
     <p class="eyebrow">From-Scratch Build · Recommendation Systems</p>
     <h1>Game Recommender</h1>
-    <p class="lede">Millions of Amazon video-game reviews hold a quiet map of what-goes-with-what — if you can read it. This build turns that noisy mountain of ratings into clean "if you liked this, play that" recommendations. I rebuilt it from scratch to learn how a recommender survives contact with real, messy, large-scale data.</p>
+    <p class="lede">Amazon's video-game reviews hold a quiet map of what-goes-with-what — if you can read it. This build turns that noisy, sparse pile of ratings into clean "if you liked this, play that" recommendations with item-based collaborative filtering, and measures itself against a popularity baseline on held-out data.</p>
     <div class="meta">
-      <span class="chip">Python</span><span class="chip">Implicit feedback</span><span class="chip">Item-based CF</span>
-      <span class="chip">Sparse matrices</span><span class="chip">Amazon reviews</span><span class="chip">RecSys</span>
+      <span class="chip">Python</span><span class="chip">Adjusted cosine</span><span class="chip">Item-based CF</span>
+      <span class="chip">Sparse matrices</span><span class="chip">Amazon reviews</span><span class="chip">Recall@K</span>
     </div>
   </div>
 </header>
@@ -76,11 +76,11 @@
   <div class="wrap">
     <p class="kicker">What it is</p>
     <h2>Recommendations from real review data</h2>
-    <p>The dataset is the point. Amazon's video-game reviews are huge, sparse and skewed — a handful of blockbuster titles drown out a long tail of niche games, and most users have reviewed only one or two things. The build learns item-to-item relationships from this: games frequently loved by the same people are linked, so a title you rated highly pulls up its closest companions.</p>
-    <p>Item-based collaborative filtering is the right tool here precisely because it's robust to the mess: relationships between <i>games</i> are far more stable than the fickle, sparse profiles of individual users. It's a lesson in choosing the method that fits the data you actually have.</p>
+    <p>The data is the real Amazon <b>Video Games 5-core</b> review corpus (~231k reviews). It's sparse and skewed — a handful of blockbusters drown out a long tail of niche games. A prep step streams the raw corpus, de-duplicates, caps the catalogue to the most-reviewed titles and applies a 5/10 k-core, leaving a clean committed slice: <b>71,746 ratings · 8,314 users · 1,198 games</b> at 0.72% density.</p>
+    <p>The build learns item-to-item relationships from this: games frequently loved by the same people are linked, so a title you rated highly pulls up its closest companions. Item-based collaborative filtering fits the mess precisely because relationships between <i>games</i> are far more stable than the fickle, sparse profiles of individual users.</p>
     <div class="price">
-      <div class="n">long tail</div>
-      <div class="l">the shape of the data — a few mega-popular games, a vast tail of niche ones — that every design decision has to respect.</div>
+      <div class="n">+92.8%</div>
+      <div class="l">Recall@10 lift of item-based CF over a popularity baseline on 8,215 held-out users (0.1042 vs 0.0540) — real numbers from the eval below.</div>
     </div>
   </div>
 </section>
@@ -89,14 +89,14 @@
   <div class="wrap">
     <p class="kicker">The stack</p>
     <h2>From raw reviews to "play this next"</h2>
-    <p class="muted">Built to handle scale and sparsity, not a toy dataset.</p>
+    <p class="muted">Real data, real evaluation — scipy sparse matrices, no toy shortcuts.</p>
     <div class="grid">
-      <div class="tool"><div class="t">data</div><h3>Review corpus</h3><p>Large-scale Amazon game reviews — ratings, users and items at real-world scale.</p></div>
-      <div class="tool"><div class="t">prep</div><h3>Sparse matrix</h3><p>Represent the user–item interactions sparsely so millions of entries fit in memory.</p></div>
-      <div class="tool"><div class="t">core</div><h3>Item similarity</h3><p>Compute which games co-occur in people's libraries — the backbone of item-based CF.</p></div>
-      <div class="tool"><div class="t">signal</div><h3>Implicit feedback</h3><p>Treat a review as a weak signal of interest, weighting confidence rather than trusting stars alone.</p></div>
-      <div class="tool"><div class="t">rank</div><h3>Top-N retrieval</h3><p>For a given game, surface its most-related titles, filtered for popularity bias.</p></div>
-      <div class="tool"><div class="t">evaluate</div><h3>Hit-rate @ K</h3><p>Hold out a user's last game and check whether the recommender would have found it.</p></div>
+      <div class="tool"><div class="t">data</div><h3>Review corpus</h3><p>Amazon Video Games 5-core reviews, k-cored to a clean 71,746-rating slice.</p></div>
+      <div class="tool"><div class="t">prep</div><h3>Sparse matrix</h3><p>A CSR user × game matrix built with scipy so the maths runs at scale.</p></div>
+      <div class="tool"><div class="t">core</div><h3>Adjusted cosine</h3><p>Mean-centre each user's ratings, then cosine over co-raters — cancels the "rates everything 5★" bias.</p></div>
+      <div class="tool"><div class="t">robust</div><h3>Overlap + shrinkage</h3><p>Drop pairs with too few co-raters; shrink thinly-supported similarities toward zero.</p></div>
+      <div class="tool"><div class="t">rank</div><h3>Top-N retrieval</h3><p>Aggregate neighbour similarities over a user's games, excluding what they've already played.</p></div>
+      <div class="tool"><div class="t">evaluate</div><h3>Recall@K vs baseline</h3><p>Leave-one-out hold-out, scored against a popularity baseline — +92.8% at K=10.</p></div>
     </div>
   </div>
 </section>
@@ -107,12 +107,26 @@
     <h2>How a recommendation is built</h2>
     <p>From raw reviews to a related-games list, the pipeline is steady:</p>
     <ol class="flow">
-      <li><h3>Ingest</h3><p>Load and clean the review data into users, items and ratings.</p></li>
-      <li><h3>Sparsify</h3><p>Build the sparse interaction matrix the algorithm operates on.</p></li>
-      <li><h3>Relate</h3><p>Compute item–item similarities across the whole catalogue.</p></li>
-      <li><h3>Recommend</h3><p>For a seed game, retrieve and rank its nearest companions.</p></li>
-      <li><h3>Validate</h3><p>Measure hit-rate on held-out interactions and correct for popularity bias.</p></li>
+      <li><h3>Ingest</h3><p>Stream the Amazon corpus, de-duplicate, cap the catalogue and k-core into a clean ratings slice.</p></li>
+      <li><h3>Sparsify</h3><p>Build the CSR user × game matrix and mean-centre each user's observed ratings.</p></li>
+      <li><h3>Relate</h3><p>Adjusted-cosine similarity over co-raters, with overlap filtering, shrinkage and top-k neighbours.</p></li>
+      <li><h3>Recommend</h3><p>Aggregate neighbour similarities over a user's games; rank unseen titles top-N.</p></li>
+      <li><h3>Validate</h3><p>Leave-one-out hold-out; report Recall@K / HitRate@K against a popularity baseline.</p></li>
     </ol>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <p class="kicker">Results</p>
+    <h2>Measured against a baseline</h2>
+    <p>Leave-one-out evaluation on 8,215 held-out users — for each, one 4★+ game is hidden and the model is scored on whether it surfaces in the top-K. Item-based CF clears the popularity baseline at every K. Real numbers from <code>python demo.py</code>.</p>
+    <div class="grid" style="grid-template-columns:repeat(3,1fr)">
+      <div class="tool"><div class="t">Recall@5</div><h3 style="font-family:var(--serif);color:var(--accent)">0.0668</h3><p>vs 0.0348 popularity · +92.0%</p></div>
+      <div class="tool"><div class="t">Recall@10</div><h3 style="font-family:var(--serif);color:var(--accent)">0.1042</h3><p>vs 0.0540 popularity · +92.8%</p></div>
+      <div class="tool"><div class="t">Recall@20</div><h3 style="font-family:var(--serif);color:var(--accent)">0.1529</h3><p>vs 0.0857 popularity · +78.4%</p></div>
+    </div>
+    <p class="muted" style="margin-top:18px;font-size:.9rem">At K=10 the recommender finds the held-out game for 856 of 8,215 users, against 444 for the baseline. The full package, tests and eval are on <a href="https://github.com/andreaisabelmontana/game-recommender">GitHub</a>.</p>
   </div>
 </section>
 
@@ -122,10 +136,10 @@
     <h2>What rebuilding it taught me</h2>
     <ul class="learn">
       <li><b>The data picks the method.</b> Sparse, skewed reviews make item-based CF the natural fit — stable item relationships beat fragile user profiles.</li>
-      <li><b>Implicit signals need confidence.</b> A review isn't a clean rating; weighting how much to trust each interaction matters more than the star value.</li>
-      <li><b>Popularity bias is sneaky.</b> Without correction, the recommender just keeps suggesting the blockbusters everyone already knows.</li>
-      <li><b>Sparsity is an engineering problem.</b> Half the work is representing millions of interactions so the maths even runs.</li>
-      <li><b>Offline metrics are a proxy.</b> Hit-rate is useful, but it only hints at whether a human would actually click play.</li>
+      <li><b>Mean-centring matters.</b> Adjusted cosine cancels the "rates everything 5★" bias; plain cosine over raw stars is fooled by generous raters.</li>
+      <li><b>Sparsity is noise.</b> A similarity from two shared raters is meaningless — overlap filtering and shrinkage were the difference between signal and junk.</li>
+      <li><b>Popularity is a real baseline.</b> Just recommending blockbusters already lands ~5% Recall@10; a model has to clearly beat that to earn its complexity. This one roughly doubles it.</li>
+      <li><b>Offline metrics are a proxy.</b> Recall@K is honest about hold-out hits, but only hints at whether a human would actually click play.</li>
     </ul>
   </div>
 </section>
